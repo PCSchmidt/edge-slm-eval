@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "edge-slm-eval"
+version = "0.1.0"
+description = "Air-gapped evaluation harness for quantized small language models: schema adherence, AST-gated tool calls, TTFT and throughput."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "PCSchmidt" }]
+dependencies = ["pydantic>=2.6"]
+
+[project.optional-dependencies]
+llama = ["llama-cpp-python>=0.2.80", "psutil>=5.9"]
+dev = ["pytest>=8", "hypothesis>=6.100", "mypy>=1.10", "ruff>=0.5"]
+
+[project.scripts]
+edge-slm-eval = "edge_slm_eval.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/edge_slm_eval"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["llama_cpp.*", "psutil.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
