@@ -1,15 +1,13 @@
-FROM python:3.12-slim AS build
+FROM python:3.12-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake \
-    && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install --no-cache-dir ".[llama]"
-
-FROM python:3.12-slim
-COPY --from=build /usr/local /usr/local
-COPY tests /app/tests
-WORKDIR /app
-# Run with: docker run --network none -v ./models:/models:ro ...
-ENTRYPOINT []
-CMD ["edge-slm-eval", "--help"]
+COPY tests ./tests
+COPY scripts ./scripts
+COPY examples ./examples
+# Prebuilt CPU wheel of llama-cpp-python: no compiler needed in the image.
+RUN pip install --no-cache-dir --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu \
+    -e ".[llama,dev]"
+# Offline use: docker run --rm --network none -v "$PWD/models:/models:ro" IMAGE \
+#     edge-slm-eval --model /models/model.gguf --out /tmp/results
+CMD ["python", "-m", "pytest", "-q"]

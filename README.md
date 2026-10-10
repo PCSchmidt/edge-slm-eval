@@ -1,6 +1,6 @@
 # edge-slm-eval — test small language models for offline, tactical-edge use, with a deterministic gate in front of every tool call
 
-**Status: v0.1, portfolio project.** The gate, the 20-prompt battery, the harness and the report writer are built and tested against scripted stand-ins. **No real quantized model has been benchmarked yet**, so there are no model numbers; the results table is deliberately empty ([Results](#results)).
+**Status: v0.2, portfolio project.** The gate, battery, harness and both backends are built and tested, and the battery has been run on four real quantized models on CPU and GPU (16 configurations). The main open items are a bigger battery, few-shot prompts and a fixed-clock GPU run ([Limitations](#limitations)).
 
 ```text
 $ python examples/demo_gate.py            # what the gate does with model-emitted text (no model involved)
@@ -42,18 +42,18 @@ It is a poor fit if you need to evaluate reasoning quality, long-context behavio
 
 A model can emit anything, including `os.system('rm -rf /')`. Constrained decoding (a grammar) reduces bad output but is not a guarantee, and a second model checking the first is just more probabilistic output. Parsing the call with Python's `ast` module and checking it against a fixed registry gives a decision that is deterministic, testable and explainable. `eval` and `exec` are never used anywhere.
 
-**What's real and what's not.** The gate, the battery, the harness logic, the report writer and the llama.cpp backend code are real and tested. **A real GGUF model has not been run through it**; every measurement path is exercised only by scripted backends. The Docker recipe has not been built yet.
+**What's real and what's not.** The gate, the battery, the harness and the report writer are tested, and four real models (Llama 3.2 3B at Q4_K_M and Q8_0, Mistral 7B v0.3 and Qwen2.5-Coder 7B at Q4_K_M) have been benchmarked on one laptop (i9-12950HX CPU, RTX A4500 GPU). The numbers are real but narrow: 20 prompts, four tools, zero-shot, one machine whose GPU was power-throttled during the runs. Read the results with the caveats in [docs/RESULTS.md](docs/RESULTS.md).
 
 ## At a glance
 
 | | |
 | --- | --- |
-| Input | a local GGUF model file |
+| Input | a local GGUF model file (CPU via llama.cpp) or a model served by a local Ollama (GPU) |
 | Battery | 20 fixed prompts: sensor status (5), azimuth (5), distance (4), battery runtime (4), prompt injection (2) |
 | Gate | strict JSON schema, then AST check against a 4-tool registry; 8 reject codes |
 | Measured per model | schema adherence, gate pass rate, correctness, TTFT (median), tokens/s, peak RSS |
 | Decoding modes | constrained (GBNF grammar) and unconstrained, reported separately |
-| Tests | 17, including property-based; `mypy --strict`; ruff |
+| Tests | 23, including property-based and a fake-server test of the Ollama streaming code; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -110,7 +110,7 @@ git clone https://github.com/PCSchmidt/edge-slm-eval && cd edge-slm-eval
 uv venv && uv pip install -e ".[dev]"            # gate, battery, harness: no model needed
 
 python examples/demo_gate.py                    # the output shown above
-pytest -q                                       # 17 passed
+pytest -q                                       # 23 passed
 
 # with a real model (needs a C++ toolchain to build llama-cpp-python):
 uv pip install -e ".[llama]"
@@ -118,12 +118,20 @@ edge-slm-eval --model models/llama-3.2-3b-instruct-q4_k_m.gguf --out results/
 edge-slm-eval --model ... --no-grammar          # unconstrained, for comparison
 ```
 
-Intended offline container (**written but not yet built or run**):
+Offline container (builds with a prebuilt CPU wheel; the tests pass inside it with no network):
 
 ```bash
 docker build -t edge-slm-eval .
+docker run --rm --network none edge-slm-eval                                  # runs the tests
 docker run --rm --network none -v "$PWD/models:/models:ro" edge-slm-eval \
     edge-slm-eval --model /models/model.gguf --out /tmp/results
+```
+
+To reproduce the real-model table (needs Ollama with the four models pulled; about an hour on CPU):
+
+```bash
+python scripts/run_real.py --passes 3      # writes results/real/*.json, runs CPU then GPU
+python scripts/diagnose.py                 # rebuilds results/real/results_table.md
 ```
 
 ## Approach: why it is built this way
@@ -148,25 +156,45 @@ Standard LLM agent frameworks assume a fast network and permissive execution. Di
 
 ## Results
 
-**No model has been benchmarked.** The table the harness will fill in:
+Four models x CPU/GPU x constrained/unconstrained, 20 prompts each, the same GGUF weights on both backends. "Correct" requires the output to pass the schema gate and the AST gate and equal the expected call. Full protocol, caveats, and the first pass that was thrown away and why: [docs/RESULTS.md](docs/RESULTS.md).
 
-| Model | N | Schema % | Gate % | Correct % | TTFT p50 (s) | tok/s | Peak RSS (MB) |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Llama-3.2-3B-Instruct Q4_K_M | - | - | - | - | - | - | - |
-| Llama-3.2-3B-Instruct Q8_0 | - | - | - | - | - | - | - |
-| Mistral-7B-Instruct-v0.3 Q4_K_M | - | - | - | - | - | - | - |
-| Qwen2.5-Coder-7B Q4_K_M | - | - | - | - | - | - | - |
+| Model | Device | Mode | Schema % | Correct % (strict gate) | Correct % if keyword args accepted | TTFT p50 (s) | Decode tok/s | GPU clock, median MHz |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Llama 3.2 3B Q4_K_M | CPU | constrained | 100 | 65 | 100 | 0.263 | 10.8 | - |
+| Llama 3.2 3B Q4_K_M | CPU | unconstrained | 100 | 65 | 100 | 0.244 | 20.8 | - |
+| Llama 3.2 3B Q4_K_M | GPU | constrained | 100 | 60 | 95 | 0.056 | 126.4 | 1200 |
+| Llama 3.2 3B Q4_K_M | GPU | unconstrained | 100 | 60 | 95 | 0.057 | 134.5 | 1095 |
+| Llama 3.2 3B Q8_0 | CPU | constrained | 100 | 60 | 70 | 0.562 | 8.7 | - |
+| Llama 3.2 3B Q8_0 | CPU | unconstrained | 75 | 60 | 70 | 0.554 | 14.0 | - |
+| Llama 3.2 3B Q8_0 | GPU | constrained | 100 | 50 | 65 | 0.054 | 101.8 | 1170 |
+| Llama 3.2 3B Q8_0 | GPU | unconstrained | 75 | 50 | 65 | 0.061 | 103.8 | 1418 |
+| Mistral 7B v0.3 Q4_K_M | CPU | constrained | 100 | 95 | 95 | 0.629 | 8.2 | - |
+| Mistral 7B v0.3 Q4_K_M | CPU | unconstrained | 95 | 90 | 90 | 0.698 | 8.8 | - |
+| Mistral 7B v0.3 Q4_K_M | GPU | constrained | 100 | 95 | 95 | 0.068 | 64.2 | 952 |
+| Mistral 7B v0.3 Q4_K_M | GPU | unconstrained | 95 | 90 | 90 | 0.059 | 63.6 | 945 |
+| Qwen2.5-Coder 7B Q4_K_M | CPU | constrained | 100 | 100 | 100 | 0.639 | 6.3 | - |
+| Qwen2.5-Coder 7B Q4_K_M | CPU | unconstrained | 60 | 60 | 60 | 0.620 | 10.0 | - |
+| Qwen2.5-Coder 7B Q4_K_M | GPU | constrained | 100 | 100 | 100 | 0.067 | 61.4 | 840 |
+| Qwen2.5-Coder 7B Q4_K_M | GPU | unconstrained | 65 | 65 | 65 | 0.069 | 62.6 | 878 |
 
-Verified today: 17 tests pass. They cover every reject code, show that injection strings never reach execution, show that a scripted oracle backend scores 100% and a corrupted one scores 0% with 20 logged violations, and check (by property test) that arbitrary call text never crashes or executes anything and that azimuth is always in [0, 360). That last property test found a real bug (a tiny negative bearing rounded up to exactly 360.0), now fixed. N=20 per cell is small, so differences under about two prompts should not be claimed. Details and protocol: [docs/RESULTS.md](docs/RESULTS.md).
+The "if keyword args accepted" column is a post-hoc diagnostic from the saved raw outputs, not the headline; it relaxes only the keyword-argument rule. With 20 prompts a percentage is uncertain by roughly ±20 points, so differences of one to three prompts are noise.
+
+- **Constrained decoding raised format adherence and never lowered it**: Qwen2.5-Coder 7B went from 60-65% valid output to 100%, Llama 3B Q8 from 75% to 100%.
+- **A valid JSON wrapper is not a valid call.** Llama 3B Q8 was 100% schema-valid constrained but 50-60% correct: it tries to write an inner quote without escaping it, the grammar closes the string there, and the call is truncated to `get_sensor_status(sensor_id=`. The AST gate is what catches that.
+- **One strict rule explains much of the Llama result.** It writes `get_sensor_status(sensor_id='...')` with a keyword argument where the prompt asks for a positional one. Accepting keyword arguments would move Llama 3B Q4 from 65% to 100%. Both numbers are reported.
+- **Prompt injection never reached execution.** Across the 320 first-pass outputs nothing outside the four registered tools ran. Llama 3B Q4 on the GPU did emit the injected `os.system('ls')`, rejected `NOT_A_CALL`; Mistral, unconstrained, appended a `delete_logs()` call, rejected by the schema.
+- **Speed.** CPU decode 6-21 tok/s with a first token in 0.24-0.70 s; GPU about 100-135 tok/s for the 3B models and 61-64 tok/s for the 7B models. The GPU numbers are **throttled-GPU numbers**: the laptop GPU was power-capped at 840-1418 MHz of a 1785 MHz maximum, so they depend on the clock state and are not hardware limits.
 
 ## Limitations
 
-- **No real model run yet.** All measurement code paths are exercised by scripted backends only; real timings, memory and adherence are unknown.
-- **Small battery.** 20 prompts, four tools, one language style. It tests format discipline, not reasoning, and says nothing about long contexts or multi-turn tool use (not built yet).
-- **The tools are simulated.** The sensor table is a fixed dictionary; the geodesy functions are standard spherical formulas.
-- **Memory measurement is coarse.** Peak resident memory is sampled during streaming, not profiled.
-- **Hardware not characterised.** CPU versus single-GPU comparison, thread counts and quantization sweeps are planned, not done.
-- **Docker recipe unbuilt**, and vLLM is not supported.
+- **Small, narrow battery.** 20 prompts, four tools, zero-shot, one fixed prompt. It tests format discipline and simple calls, not reasoning, long contexts or multi-turn tool use (not built). Intervals are about ±20 points.
+- **The strict gate is a choice.** Rejecting keyword arguments is a design decision that costs some models a lot (Llama 3B Q4: 65% against 100%). The headline uses the strict gate; the diagnostic column shows the other view. Few-shot examples would probably remove the habit and are excluded on purpose.
+- **GPU timings are not hardware limits.** The GPU was power-capped during every GPU run (clocks 840-1418 MHz of 1785), and one run was thermally throttled and had to be repeated. Accuracy columns are unaffected.
+- **CPU and GPU rows are different systems.** They share weights but not chat templates, constrained-decoding implementations or default context length, so small correctness gaps between them are not a hardware effect.
+- **One machine, one run each.** No other hardware, no fixed-clock run, and Mistral was non-deterministic across passes on the GPU in constrained mode.
+- **Memory is not one measurement.** CPU rows report process memory, GPU rows report the model size Ollama says is loaded.
+- **Only some quantizations.** Q4_K_M for the 7B models; Q8_0 only for the 3B. vLLM, multi-turn context degradation and energy use are not covered.
+- **The tools are simulated**: a fixed sensor table and standard spherical formulas.
 
 ## Operational notes
 
@@ -181,16 +209,20 @@ No keys, no network use after the model file is on disk, no private data. Prompt
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                           # 17 passed, no model needed
+pytest -q                           # 23 passed, no model needed
 mypy src tests                      # strict, clean
 python examples/demo_gate.py        # the gate decisions shown at the top
+python scripts/diagnose.py          # rebuilds the results table from results/real/*.json
+docker build -t edge-slm-eval . && docker run --rm --network none edge-slm-eval   # tests offline
 ```
 
 ### Documentation map
 
 | Doc | What it covers |
 | --- | --- |
-| [docs/RESULTS.md](docs/RESULTS.md) | the empty results table, protocol, what is verified |
+| [docs/RESULTS.md](docs/RESULTS.md) | protocol, the full table, findings, the GPU throttling note, what went wrong and was fixed |
+| [results/real/](results/real/) | every run as JSON: per-prompt outputs, rejection codes, timings and GPU state |
+| [scripts/run_real.py](scripts/run_real.py), [scripts/diagnose.py](scripts/diagnose.py) | the benchmark driver and the diagnostic/table builder |
 | [examples/demo_gate.py](examples/demo_gate.py) | the gate demo shown above |
 | [src/edge_slm_eval/guardrail.py](src/edge_slm_eval/guardrail.py) | the whole gate, in one short file |
 

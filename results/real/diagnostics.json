@@ -1,0 +1,114 @@
+{
+ "llama3.2-3b-instruct-q4_K_M__cpu__constrained": {
+  "strict_correct": 13,
+  "correct_if_keywords_accepted": 20,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 7
+  }
+ },
+ "llama3.2-3b-instruct-q4_K_M__cpu__unconstrained": {
+  "strict_correct": 13,
+  "correct_if_keywords_accepted": 20,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 7
+  }
+ },
+ "llama3.2-3b-instruct-q4_K_M__gpu__constrained": {
+  "strict_correct": 12,
+  "correct_if_keywords_accepted": 19,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 7
+  }
+ },
+ "llama3.2-3b-instruct-q4_K_M__gpu__unconstrained": {
+  "strict_correct": 12,
+  "correct_if_keywords_accepted": 19,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 7
+  }
+ },
+ "llama3.2-3b-instruct-q8_0__cpu__constrained": {
+  "strict_correct": 12,
+  "correct_if_keywords_accepted": 14,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 2
+  }
+ },
+ "llama3.2-3b-instruct-q8_0__cpu__unconstrained": {
+  "strict_correct": 12,
+  "correct_if_keywords_accepted": 14,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 2
+  }
+ },
+ "llama3.2-3b-instruct-q8_0__gpu__constrained": {
+  "strict_correct": 10,
+  "correct_if_keywords_accepted": 13,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 3
+  }
+ },
+ "llama3.2-3b-instruct-q8_0__gpu__unconstrained": {
+  "strict_correct": 10,
+  "correct_if_keywords_accepted": 13,
+  "of": 20,
+  "recovered": {
+   "recovered_by_keyword_normalisation": 3
+  }
+ },
+ "mistral-7b-instruct-v0.3-q4_K_M__cpu__constrained": {
+  "strict_correct": 19,
+  "correct_if_keywords_accepted": 19,
+  "of": 20,
+  "recovered": {}
+ },
+ "mistral-7b-instruct-v0.3-q4_K_M__cpu__unconstrained": {
+  "strict_correct": 18,
+  "correct_if_keywords_accepted": 18,
+  "of": 20,
+  "recovered": {}
+ },
+ "mistral-7b-instruct-v0.3-q4_K_M__gpu__constrained": {
+  "strict_correct": 19,
+  "correct_if_keywords_accepted": 19,
+  "of": 20,
+  "recovered": {}
+ },
+ "mistral-7b-instruct-v0.3-q4_K_M__gpu__unconstrained": {
+  "strict_correct": 18,
+  "correct_if_keywords_accepted": 18,
+  "of": 20,
+  "recovered": {}
+ },
+ "qwen2.5-coder-7b-instruct-q4_K_M__cpu__constrained": {
+  "strict_correct": 20,
+  "correct_if_keywords_accepted": 20,
+  "of": 20,
+  "recovered": {}
+ },
+ "qwen2.5-coder-7b-instruct-q4_K_M__cpu__unconstrained": {
+  "strict_correct": 12,
+  "correct_if_keywords_accepted": 12,
+  "of": 20,
+  "recovered": {}
+ },
+ "qwen2.5-coder-7b-instruct-q4_K_M__gpu__constrained": {
+  "strict_correct": 20,
+  "correct_if_keywords_accepted": 20,
+  "of": 20,
+  "recovered": {}
+ },
+ "qwen2.5-coder-7b-instruct-q4_K_M__gpu__unconstrained": {
+  "strict_correct": 13,
+  "correct_if_keywords_accepted": 13,
+  "of": 20,
+  "recovered": {}
+ }
+}
