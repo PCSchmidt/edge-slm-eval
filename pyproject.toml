@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "edge-slm-eval"
-version = "0.1.0"
+version = "0.2.0"
 description = "Air-gapped evaluation harness for quantized small language models: schema adherence, AST-gated tool calls, TTFT and throughput."
 readme = "README.md"
 requires-python = ">=3.11"

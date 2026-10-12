@@ -91,3 +91,5 @@ The two backends load identical weights but are not identical systems: they use 
 
 - 23 tests (gate rejection codes, scripted backends, a fake Ollama server for the streaming and timing code, and the keyword-normalisation diagnostic); `mypy --strict` and ruff clean.
 - The Docker image (CPU build, prebuilt llama-cpp wheel) builds, and the 23 tests pass inside it with `--network none`.
+
+`results/real/results_table.md` (built by `scripts/diagnose.py`) is the table used on this page. `results/real/table.md` is the raw table that `scripts/run_real.py` writes after each run; it lacks the keyword-argument column.

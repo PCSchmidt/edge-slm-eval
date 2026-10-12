@@ -1,5 +1,7 @@
 # edge-slm-eval — test small language models for offline, tactical-edge use, with a deterministic gate in front of every tool call
 
+![CI](https://github.com/PCSchmidt/edge-slm-eval/actions/workflows/ci.yml/badge.svg)
+
 **Status: v0.2, portfolio project.** The gate, battery, harness and both backends are built and tested, and the battery has been run on four real quantized models on CPU and GPU (16 configurations). The main open items are a bigger battery, few-shot prompts and a fixed-clock GPU run ([Limitations](#limitations)).
 
 ```text
