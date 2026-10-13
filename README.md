@@ -198,6 +198,13 @@ The "if keyword args accepted" column is a post-hoc diagnostic from the saved ra
 - **Only some quantizations.** Q4_K_M for the 7B models; Q8_0 only for the 3B. vLLM, multi-turn context degradation and energy use are not covered.
 - **The tools are simulated**: a fixed sensor table and standard spherical formulas.
 
+## Known gaps against the original roadmap
+
+The project began as an item in a longer roadmap that named a larger stack and scope. These parts of that plan were **not built**; the results above say nothing about them.
+
+- Multi-turn, recursive tool calling and context-window degradation: the battery is 20 single-turn prompts.
+- vLLM: models run through llama.cpp (CPU) and Ollama (GPU) only.
+
 ## Operational notes
 
 ### What runs where
